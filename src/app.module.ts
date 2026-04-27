@@ -43,7 +43,7 @@ import { AuthModule } from './auth/auth.module';
                 password: configService.get<string>('DB_PASSWORD'),
                 database: configService.get<string>('DB_DATABASE', 'tennis_pwa'),
                 entities: [User, Court, Reservation, Payment, AppSetting, ItemCategory, Item, PricingRule, ReservationOrder, OrderDetail, GamePlan, AcademyClass],
-                synchronize: true,
+                synchronize: false,
             }),
         }),
         EventsModule,
