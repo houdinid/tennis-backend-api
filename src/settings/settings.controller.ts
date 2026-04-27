@@ -168,24 +168,18 @@ export class SettingsController {
 
     @Get('pricing/resolve')
     async resolvePrice(@Query('dayOfWeek') dayOfWeek: number, @Query('hour') hour: number) {
-        const tiersSetting = await this.appSettingRepository.findOne({ where: { key: 'pricing_tiers' } });
-        const gridSetting = await this.appSettingRepository.findOne({ where: { key: 'pricing_grid' } });
+        // Query tables directly instead of app_settings
+        const tiersData = await this.appSettingRepository.manager.query('SELECT * FROM pricing_tiers');
+        const gridData = await this.appSettingRepository.manager.query('SELECT * FROM pricing_grid WHERE day_of_week = $1 AND hour = $2', [dayOfWeek, hour]);
 
-        if (!gridSetting || !tiersSetting) {
-            return { price: 30000 }; // Default fallback
+        if (gridData.length > 0) {
+            const tierId = gridData[0].tier_id;
+            const tier = tiersData.find((t: any) => String(t.id) === String(tierId));
+            if (tier) {
+                return { price: Number(tier.price) };
+            }
         }
 
-        const grid = JSON.parse(gridSetting.value);
-        const tiers = JSON.parse(tiersSetting.value);
-        
-        // Match the frontend key format: "day-hour"
-        const key = `${dayOfWeek}-${hour}`;
-        const tierIdx = grid[key];
-        
-        if (tierIdx !== undefined && tiers[tierIdx]) {
-            return { price: tiers[tierIdx].price };
-        }
-
-        return { price: 30000 };
+        return { price: 30000 }; // Default fallback
     }
 }

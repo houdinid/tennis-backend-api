@@ -60,7 +60,7 @@ export class PricingService {
                 // Ignore invalid UUID or other errors in user lookup
             }
         }
-        const dayOfWeek = start.getDay();
+        const dayOfWeek = (start.getDay() + 6) % 7; // Monday = 0, Sunday = 6
         const startHour = start.getHours();
 
         const items = [];
