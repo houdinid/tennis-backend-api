@@ -90,20 +90,14 @@ export class PricingService {
                 let baseSubtotal = 0;
                 let gridPricingUsed = false;
 
-                const gridSetting = await this.appSettingRepo.findOne({ where: { key: 'pricing_grid' } });
-                const tiersSetting = await this.appSettingRepo.findOne({ where: { key: 'pricing_tiers' } });
+                // NEW: Fetch directly from tables used by the new Admin Portal
+                const gridData = await this.appSettingRepo.manager.query('SELECT * FROM pricing_grid');
+                const tiersData = await this.appSettingRepo.manager.query('SELECT * FROM pricing_tiers');
 
-                // Align default IDs with frontend (tier_1, tier_2, tier_3)
-                // Align default IDs with frontend exactly as in admin.js
-                const defaultTiers = [
-                    { id: 't_25', name: 'Off-Peak', color: '#68B342', price: 25000 },
-                    { id: 't_35', name: 'Regular', color: '#F3B71E', price: 35000 },
-                    { id: 't_50', name: 'Peak', color: '#D13212', price: 50000 }
-                ];
-
-                const grid = gridSetting ? JSON.parse(gridSetting.value) : {};
-                const tiers = tiersSetting ? JSON.parse(tiersSetting.value) : defaultTiers;
-
+                const gridMap: Record<string, string> = {};
+                gridData.forEach((row: any) => {
+                    gridMap[`${row.day_of_week}-${row.hour}`] = row.tier_id;
+                });
 
                 for (let i = 0; i < hours; i++) {
                     const currentHour = startHour + i;
@@ -111,15 +105,13 @@ export class PricingService {
 
                     let hourPrice = Number(courtItem.base_price);
 
-                    if (grid && tiers) {
-                        const key = `${dayOfWeek}-${currentHour}`;
-                        const tierId = grid[key];
-                        if (tierId) {
-                            const tier = tiers.find((t: any) => t.id === tierId);
-                            if (tier) {
-                                hourPrice = Number(tier.price);
-                                gridPricingUsed = true;
-                            }
+                    const key = `${dayOfWeek}-${currentHour}`;
+                    const tierId = gridMap[key];
+                    if (tierId) {
+                        const tier = tiersData.find((t: any) => String(t.id) === String(tierId));
+                        if (tier) {
+                            hourPrice = Number(tier.price);
+                            gridPricingUsed = true;
                         }
                     }
                     itemSubtotal += hourPrice;
